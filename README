@@ -1,0 +1,35 @@
+# framecite — per-frame mini references for beamer + biblatex
+
+Version 0.7, released 2026/11/19.
+
+framecite shows the sources cited on a beamer slide as a small block at
+the bottom of that same slide, so the audience sees where a claim comes
+from without leaving the slide. Each entry prints the citation label in
+the active biblatex style, the author (or editor), and the quoted title.
+The block sits between real LaTeX footnotes and the theme footline;
+entries appear in order of first citation, deduplicated per frame.
+Collection is automatic from the standard cite commands; manual
+registration (`\fcite`) and blind registration (`\fsource`) are available.
+
+Requirements: a beamer document, and biblatex loaded before framecite
+(etoolbox and xspace are loaded automatically; titles are quoted via
+biblatex's `mkbibquote`, so loading `csquotes` is optional --- load it
+with any options wherever you like for language-aware quotation marks).
+
+Full documentation: `framecite.pdf`.
+
+Build the package and the manual from the sources:
+
+    pdflatex framecite.ins     # generates framecite.sty
+    latexmk -pdf framecite.dtx  # or: pdflatex; makeindex; pdflatex x2
+
+Alternatively use `l3build`:
+
+    l3build unpack   # framecite.sty
+    l3build doc      # framecite.pdf
+    l3build ctan     # upload zip for CTAN
+
+License: LaTeX Project Public License, version 1.3c or later.
+
+Maintainer: Hirnmoder (https://github.com/Hirnmoder/framecite)
+Bug reports: https://github.com/Hirnmoder/framecite/issues

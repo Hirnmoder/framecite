@@ -1,0 +1,867 @@
+% \iffalse meta-comment
+%
+% framecite.dtx --- Per-frame mini references for beamer + biblatex
+%
+% Copyright 2026 Hirnmoder
+%
+% It may be distributed and/or modified under the conditions of the
+% LaTeX Project Public License, either version 1.3 of this license or
+% (at your option) any later version. The latest version of this
+% license is in
+%
+%     https://www.latex-project.org/lppl.txt
+%
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status "maintained".
+% The Current Maintainer of this work is Hirnmoder.
+%
+% This work consists of the files framecite.dtx, framecite.ins,
+% build.lua, and README, and the derived files framecite.sty,
+% framecite.pdf, and framecite_demo.tex.
+%
+% \fi
+%
+%\ProvidesFile{framecite.dtx}
+% [2026/11/19 v0.7 Beamer per-frame mini references]
+%
+% \iffalse
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% Do not list TeX conditionals in the exclude list: during the
+% \DocInput pass this driver block sits inside the skip opened by the
+% wrapper comments around it, so a conditional end token in the list
+% would close that skip early.
+\DoNotIndex{\begin,\end,\relax,\string,\expandafter,
+            \csname,\endcsname,\space,\@empty,\global,\gdef,\the,\numexpr}
+\CodelineIndex
+\begin{document}
+\DocInput{framecite.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% \title{The \textsf{framecite} package}
+% \author{Hirnmoder \\ \texttt{https://github.com/Hirnmoder/framecite}}
+% \date{Version 0.7, released 2026/11/19}
+%
+% \maketitle
+%
+% \begin{abstract}
+% \textsf{framecite} shows the sources cited on a beamer slide as a
+% small block at the bottom of that same slide. Each entry renders the
+% citation label, the author or editor, and the quoted title. The block
+% sits between real \LaTeX{} footnotes and the theme footline. It is
+% populated automatically from ordinary citation commands and can be
+% extended manually.
+% \end{abstract}
+%
+% \tableofcontents
+%
+% \section{Introduction}
+%
+% Short-form citations such as \texttt{[2]} keep slide text readable, but
+% the audience can no longer see where a claim comes from. This package
+% restores that link: on every frame where a citation appears, the source
+% itself is listed at the bottom of that frame. Each entry has the form
+% \begin{quote}
+%   \texttt{<label> <author>: \string\mkbibquote\{<title>\}}
+% \end{quote}
+% where \emph{label} is whatever the active biblatex style prints
+% (\texttt{[2]} for \texttt{numeric}, \texttt{[XYZ+23]} for \texttt{alphabetic}), and
+% \emph{title} is the \texttt{shorttitle} field if present, else the \texttt{title}
+% field. Entries for one frame appear in order of first citation, and a
+% work cited more than once on a frame is listed only once.
+%
+% The source block is written into beamer's footnote insert at frame
+% end, above the theme footline and below any real footnotes. It uses a
+% blank footnote mark and its own beamer font/color element, so it reads
+% as a separate `sources' block and never disturbs the theme.
+%
+% Bugs and feature requests can be reported in the package repository at
+% \texttt{https://github.com/Hirnmoder/framecite/issues}.
+%
+% \section{Requirements and loading}
+%
+% The package requires the \LaTeX{} \textsf{beamer} class; load
+% \textsf{framecite} only in a beamer document. It further requires
+% \textsf{biblatex}, which must be loaded \emph{before}
+% \textsf{framecite} (the wrapping of the cite commands depends on it).
+% \textsf{etoolbox} and \textsf{xspace} are loaded automatically. Titles
+% in the source block are wrapped in biblatex's
+% \texttt{\string\mkbibquote}, so the quotation marks follow your setup:
+% if you load \textsf{csquotes} --- with any options, anywhere in the
+% preamble --- they come from its \texttt{\string\enquote}; otherwise
+% biblatex's quotation fallback applies, as for entry titles in the
+% bibliography. A minimal preamble:
+% \begin{verbatim}
+% \documentclass{beamer}
+% \usepackage[backend=biber, style=numeric]{biblatex}
+% \addbibresource{references.bib}
+% \usepackage{framecite}
+% \end{verbatim}
+% Both requirements are enforced: loading without beamer or before
+% biblatex terminates with a package error that names the fix.
+%
+% \section{Package options}
+%
+% \begin{itemize}
+%   \item \texttt{patchcite} (default) intercepts the short-form cite
+%     commands so that their keys feed the per-frame source list.
+%     \texttt{nopatchcite} leaves those commands untouched; register
+%     sources manually with \texttt{\string\fcite} or
+%     \texttt{\string\fsource} instead.
+%   \item \texttt{label=margin} (default) places the cite label in the
+%     left margin, so the title (and its continuation lines) stays flush
+%     at the left edge, like a normal footnote. \texttt{label=inline}
+%     sets label and title in one flow: the entry starts with the label.
+%     In \texttt{margin} mode the label juts into the gutter with its
+%     natural width.
+%   \item \texttt{rule=auto/always/never} (default \texttt{auto}) controls
+%     the rule above the footnote region. \texttt{auto} draws the rule
+%     only when a real \texttt{\string\footnote} was called on the frame;
+%     source lines do not count. \texttt{always} draws it whenever any
+%     footnote content is present (beamer's default). \texttt{never}
+%     suppresses it entirely.
+% \end{itemize}
+%
+% \section{Automatic collection}
+%
+% With \texttt{patchcite} (the default) the short-form commands that
+% print a citation label are intercepted: \texttt{\string\cite},
+% \texttt{\string\parencite}, and \texttt{\string\textcite}. Their
+% optional \texttt{[pre][post]} arguments are forwarded untouched. All
+% entries of a multi-key cite are listed separately; repeated cites of
+% one key on a frame are listed once.
+%
+% Starred variants are captured as well: the star is parsed and forwarded
+% to the original command, so \texttt{\string\cite*\{key\}} still feeds
+% the frame list.
+%
+% Four families stay unordered \emph{on purpose}:
+% \begin{itemize}
+%   \item the field extractors \texttt{\string\citeauthor},
+%     \texttt{\string\citeyear}, and \texttt{\string\citetitle} print
+%     only the name, the year, or the title --- no citation label --- so
+%     the block has no marker on the slide to explain. Register such
+%     keys with \texttt{\string\fsource} if you want the source line
+%     anyway.
+%   \item \texttt{\string\footcite} and \texttt{\string\footcitetext}
+%     already place the full citation into the footnote; an additional
+%     source line would just duplicate it. Use
+%     \texttt{\string\fsource\{key\}} if you want the key in the frame
+%     list anyway.
+%   \item \texttt{\string\fullcite} and \texttt{\string\footfullcite}
+%     already show the full entry on the slide.
+%   \item the multi-set commands \texttt{\string\cites},
+%     \texttt{\string\textcites}, \dots{} and the invisible
+%     \texttt{\string\nocite} are not captured.
+% \end{itemize}
+%
+% \DescribeMacro{\ocite}
+% Independently of \texttt{patchcite}, the untouched original cite
+% command is always available as \texttt{\string\ocite}: it takes the
+% same arguments as \texttt{\string\cite} --- star, pre-/postnote, key
+% lists --- prints the style label, and never feeds the per-frame
+% source list. Use it where a source line would only repeat what the
+% slide already shows.
+%
+% \DescribeMacro{\oparencite}
+% \DescribeMacro{\otextcite}
+% \texttt{\string\oparencite} and \texttt{\string\otextcite} are the
+% matching originals of the other two wrappable commands, with the
+% same rules.
+%
+% \section{Manual registration}
+%
+% \DescribeMacro{\fcite}
+% \texttt{\string\fcite} feeds the per-frame source list and prints the
+% style-correct label in the text, like an ordinary citation:
+% \begin{quote}
+%   \texttt{\string\fcite[pre]\{key\}[post]}
+% \end{quote}
+% The optional \emph{pre} and \emph{post} texts are shown in the footer
+% line only: \emph{pre} before the label, \emph{post} after the title.
+% They are intended for page numbers or remarks (`see', `ch.~3'). Use
+% \texttt{\string\fcite} when \texttt{patchcite} is off, or to attach
+% extra information to a source line.
+%
+% \DescribeMacro{\fsource}
+% \texttt{\string\fsource} is the \emph{blind} variant. It registers the
+% key (and optional \emph{pre}/\emph{post} texts) exactly like
+% \texttt{\string\fcite}, but typesets nothing in the text. It is safe
+% between words: no spurious space remains. Use it for implicit
+% references (images, background claims) where a visible label would
+% distract.
+%
+% Both commands accept the same starred form. Unstarred calls insert an
+% \texttt{\string\xspace} after \emph{pre} and before \emph{post}
+% automatically; the starred \texttt{\string\fcite*}/\texttt{\string\fsource*}
+% stores the texts verbatim, so you control the spacing exactly. A
+% missing optional argument is treated as empty. If a key is registered
+% more than once on a frame, the list keeps one entry; the last call
+% determines its \emph{pre}/\emph{post} texts.
+%
+% \section{Layout and styling}
+%
+% The bottom of a frame is stacked, top to bottom: slide body, real
+% \texttt{\string\footnote} region (drawn by the theme), the framecite
+% source block, then the theme footline. The source block occupies its
+% own vertical space (like a real footnote region, it reduces the slide
+% body height), so it never overlaps content and never gets clipped.
+% Real footnotes always stay above the source lines.
+%
+% Each entry prints as \texttt{<label> <names>:~\string\mkbibquote\{<title>\}}.
+% The names are the author as biblatex prints them; if the entry has no
+% author, the editor is named instead; an entry with neither prints the
+% bare quoted title (never a stray colon).
+%
+% The block is styled through the beamer element \texttt{framecite};
+% override it as usual:
+% \begin{quote}
+%   \texttt{\string\setbeamerfont\{framecite\}\{size=\string\tiny\}}\\
+%   \texttt{\string\setbeamercolor\{framecite\}\{fg=normal text.fg!70\}}
+% \end{quote}
+% The defaults set \texttt{size=\string\tiny} and
+% \texttt{fg=normal text.fg!70}. Entries in the block render with tight
+% line spacing; the blank footnote mark leaves the visual room to the
+% label, which the entry itself repeats in the style of the running
+% bibliography.
+%
+% \section{Overlay behavior}
+%
+% A frame with overlays is typeset once per slide. All collection state
+% is global, so each slide shows the source block exactly once. What is
+% listed follows where the cite command \emph{executes}, not where it
+% becomes visible: uncover-style hiding (\texttt{\string\pause},
+% \texttt{\string\onslide}, \texttt{\string\visible}, \texttt{<n>} item
+% specifications) still typesets in every pass, so such sources are
+% listed from the first slide. \texttt{\string\only}-gated cites execute
+% on their slides only and are listed from there onward.
+%
+% \section{A complete example}
+%
+% The demo file \textsf{framecite\_demo.tex} is generated from this
+% source by \texttt{framecite.ins}, so the listing below and the
+% generated file cannot drift apart. It is fully self-contained:
+% the \texttt{.bib} data is embedded via \texttt{filecontents}. Build
+% it with \texttt{latexmk -pdf} (or \texttt{pdflatex}, \texttt{biber},
+% \texttt{pdflatex}, \texttt{pdflatex}) in a directory that contains
+% \textsf{framecite.sty}, e.g.\ the one generated by \texttt{framecite.ins}.
+%    \begin{macrocode}
+%<*demo>
+% framecite: per-frame mini references. Load AFTER biblatex.
+\documentclass[aspectratio=169, 10pt]{beamer}
+
+\usetheme[progressbar=frametitle, numbering=fraction]{metropolis}
+
+\usepackage[backend=biber, style=numeric, sortcites]{biblatex}
+% To see alphabetic labels like [Knu84] instead, switch to:
+%   \usepackage[backend=biber, style=alphabetic]{biblatex}
+
+\begin{filecontents*}[overwrite]{\jobname.bib}
+@article{knuth1984,
+  author    = {Donald E. Knuth},
+  title     = {Literate Programming},
+  shorttitle= {Literate Programming},
+  journal   = {The Computer Journal},
+  volume    = {27},
+  number    = {2},
+  pages     = {97--111},
+  year      = {1984},
+}
+@book{lamport1994,
+  author    = {Leslie Lamport},
+  title     = {{LaTeX: A Document Preparation System}},
+  shorttitle= {{LaTeX}},
+  publisher = {Addison-Wesley},
+  year      = {1994},
+}
+@inproceedings{mittelbach2004,
+  author    = {Frank Mittelbach and Michel Goossens and Johannes Braams
+               and David Carlisle and Chris Rowley},
+  title     = {The {\LaTeX} Companion},
+  shorttitle= {{LaTeX} Companion},
+  publisher = {Addison-Wesley},
+  year      = {2004},
+}
+@proceedings{nips2017,
+  editor    = {Isabelle Guyon and Ulrike von Luxburg and Samy Bengio
+               and Hanna Wallach and Rob Fergus and S. V. N. Vishwanathan
+               and Roman Garnett},
+  title     = {Advances in Neural Information Processing Systems 30},
+  shorttitle= {NeurIPS 30},
+  publisher = {Curran Associates},
+  year      = {2017},
+}
+\end{filecontents*}
+\addbibresource{\jobname.bib}
+
+\usepackage[rule=auto, label=margin]{framecite}
+
+\title{framecite}
+\subtitle{Per-frame mini references for beamer + biblatex}
+\author{Hirnmoder}
+\date{v0.7 (2026-11-19)}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{The idea}
+  Short-form citations stay readable in the text, but the audience still
+  sees the source on the very slide: the literate-programming idea goes
+  back to~\cite{knuth1984}, and the standard reference
+  is~\cite{lamport1994}. \pause
+
+  \medskip
+  Each cited work appears once below, in first-citation order --- even if
+  you cite it repeatedly~\cite{knuth1984,knuth1984}.
+\end{frame}
+
+\begin{frame}{Automatic collection}
+  With \texttt{patchcite} (the default) the short-form commands that
+  print a citation label are intercepted: \texttt{\string\cite},
+  \texttt{\string\parencite}, and \texttt{\string\textcite}.
+
+  \medskip
+  The field extractors \texttt{\string\citeauthor},
+  \texttt{\string\citeyear} and \texttt{\string\citetitle} print no
+  label, so they leave the block alone; \texttt{\string\fsource}
+  registers such keys manually.
+
+  \medskip
+  \parencite{mittelbach2004} extends the basics, while
+  \textcite{knuth1984} coined the term. Proceedings with editors but no
+  authors are handled too~\cite{nips2017}: the source line names the
+  editor.
+\end{frame}
+
+\begin{frame}{What is \emph{not} intercepted}
+  \texttt{\string\footcite} and \texttt{\string\footfullcite} already
+  place the full citation in the footnote, so they are left alone --- an
+  extra source line would only duplicate it.
+
+  \medskip
+  For comparison, here is a full footnote
+  citation~\footfullcite{lamport1994}, with no additional source line
+  below.
+
+  \medskip
+  The untouched originals are always available as
+  \texttt{\string\ocite}, \texttt{\string\oparencite} and
+  \texttt{\string\otextcite}:~\ocite{knuth1984} prints the style label
+  and feeds nothing below --- with or without \texttt{patchcite}.
+\end{frame}
+
+\begin{frame}{Manual registration}
+  \texttt{\string\fcite\,[pre]\{key\}[post]} prints the label and
+  registers the source; the optional pre/post texts appear in the footer
+  line only --- before the label and after the title.
+
+  \medskip
+  The idea goes back to~\fcite[cf.]{knuth1984}[ch.~2], and the standard
+  reference is~\fcite{lamport1994}.\pause
+
+  \medskip
+  \texttt{\string\fsource} is the \emph{blind} variant: it registers the
+  source without printing a marker.\fsource{mittelbach2004} Nothing
+  visible here, yet the \LaTeX{} Companion appears below.
+\end{frame}
+
+\begin{frame}{Overlay behavior}
+  A source is listed where the cite \emph{executes}, not where it becomes
+  visible.
+  \medskip
+  \begin{itemize}
+    \item \cite{knuth1984} sits in the open: listed on every slide.
+    \item<2-> \only<2>{\fcite{lamport1994}} runs on slide~2 only, so Lamport
+      appears from slide~2.
+  \end{itemize}
+  \medskip
+  Uncover-style hiding (\texttt{\string\pause},
+  \texttt{\string\onslide}, \texttt{\string\visible}) still typesets every
+  pass; \texttt{\string\only} discards its content on other slides.
+\end{frame}
+
+\begin{frame}{Configuration}
+  Three option groups, set at load time:
+  \begin{description}
+    \item[\texttt{patchcite}] intercept the standard cite commands
+      (default). \texttt{nopatchcite} leaves them untouched; register
+      sources with \texttt{\string\fcite} or \texttt{\string\fsource}.
+    \item[\texttt{label=margin}] place the label in the left margin
+      (default); \texttt{label=inline} sets label and title in one flow.
+    \item[\texttt{rule=auto}] draw the footnote rule only when a real
+      \texttt{\string\footnote} was called (default). \texttt{always}
+      draws it for any footnote content; \texttt{never} suppresses it.
+  \end{description}
+  \medskip
+  This demo loads \texttt{[rule=auto, label=margin]}.
+\end{frame}
+
+\begin{frame}{Known limitations}
+  \begin{itemize}
+    \item Citations inside \texttt{\string\frametitle} or
+      \texttt{\string\framesubtitle} are \emph{not} collected: beamer
+      typesets the title after the source flush. Use
+      \texttt{\string\fsource} in the body instead.
+    \item The source order is first appearance, not bibliography order.
+    \item The multi-set commands \texttt{\string\cites},
+      \texttt{\string\textcites}, \ldots\ and \texttt{\string\nocite} are
+      not captured.
+    \item In \texttt{rule=auto} mode, a \texttt{\string\footnote} inside a
+      \texttt{minipage} (without the \texttt{[frame]} option) falsely
+      draws the rule above the source block: the wrapper cannot tell a
+      minipage-scoped footnote from a frame-scoped one (next slide).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Limitation: \texttt{rule=auto} and minipage footnotes}
+  A \texttt{\string\footnote} inside a \texttt{minipage} (without the
+  beamer \texttt{[frame]} option) is set at the minipage bottom --- standard
+  beamer behavior, not a bug. The subtle part is the interaction with
+  \texttt{rule=auto}: the rule above the source block should appear only
+  when a real frame-level footnote sits above it. The package wraps
+  \texttt{\string\footnote} to flag ``real footnote'', but cannot tell a
+  minipage-scoped call from a frame-scoped one, so a minipage footnote
+  still raises the flag.\vspace{2ex}
+
+  \begin{minipage}{0.46\linewidth}
+    A footnote inside a minipage.\footnote{Placed at the minipage bottom,
+    yet it draws the rule above the source lines.}
+  \end{minipage}\hfill%
+  \begin{minipage}{0.46\linewidth}
+    The cite here registers normally~\cite{mittelbach2004}, and a rule
+    appears above it though no frame footnote is present.
+  \end{minipage}\vspace{2ex}
+
+  Workaround: \texttt{\string\footnote[frame]\{...\}} for a genuine frame
+  footnote, or \texttt{rule=never} / \texttt{rule=always}.
+\end{frame}
+
+\begin{frame}[allowframebreaks]{References}
+  \printbibliography
+\end{frame}
+
+\end{document}
+%</demo>
+%    \end{macrocode}
+%
+% \section{Known limitations}
+%
+% \begin{itemize}
+%   \item Citations inside \texttt{\string\frametitle} or
+%     \texttt{\string\framesubtitle} are not collected: beamer typesets
+%     the title after the frame-end source flush has run. Register such
+%     sources with \texttt{\string\fsource} in the frame body instead.
+%   \item The \emph{order} of the source block is first appearance on the
+%     frame, not bibliography order. A bibliography-ordered block would
+%     need per-frame \texttt{refsection}s; this is out of scope.
+%   \item The multi-set commands \texttt{\string\cites} and friends, and
+%     \texttt{\string\nocite}, are not captured.
+%   \item The package targets the \texttt{numeric} and \texttt{alphabetic}
+%     styles. With \texttt{verbose}/\texttt{authoryear} the source block
+%     still renders, but calling the original cite command inside the
+%     block may influence biblatex's cite tracker (first/short-form
+%     logic). If you rely on verbose shortening, test carefully.
+%   \item In \texttt{rule=auto} mode, a \texttt{\string\footnote} called
+%     inside a \texttt{minipage} (without beamer's \texttt{[frame]} option)
+%     falsely raises the ``real footnote'' flag and draws the rule above
+%     the source block, even though no frame-level footnote sits above
+%     it. The package's \texttt{\string\footnote} wrapper cannot
+%     distinguish a minipage-scoped call from a frame-scoped one. Use
+%     \texttt{\string\footnote[frame]\{...\}} for a genuine frame
+%     footnote, or \texttt{rule=never} / \texttt{rule=always}.
+% \end{itemize}
+%
+% \section{License}
+%
+% The files of this work are distributed under the LaTeX Project Public
+% License, version 1.3 or later; see the file header for details. The
+% current maintainer is Hirnmoder.
+%
+% \StopEventually{\PrintIndex}
+%
+% \section{Implementation}
+%
+% The implementation order follows the file: options, guards, the
+% per-frame collection, the rendering commands, the frame-end flush,
+% the cite-command interception, and the styling hooks.
+%
+% The package needs e-TeX (\textsf{etoolbox} keys off it), the beamer
+% class (we patch \texttt{\string\endbeamer@frameslide} and hook the
+% \texttt{frame} environment), and \textsf{biblatex} (\texttt{\string\DeclareCiteCommand}).
+%
+%    \begin{macrocode}
+%<*package>
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{framecite}[2026/11/19 v0.7 Beamer per-frame mini references]
+%    \end{macrocode}
+
+%
+% First the options. \texttt{patchcite}/\texttt{nopatchcite} select
+% whether the cite commands are wrapped at all.
+%
+%    \begin{macrocode}
+\newif\ifframecite@patchcite
+\framecite@patchcitetrue
+\DeclareOption{patchcite}{\framecite@patchcitetrue}
+\DeclareOption{nopatchcite}{\framecite@patchcitefalse}
+%    \end{macrocode}
+%
+% The label placement modes. The public option is
+% \texttt{label=margin/inline}; internally the mode lives in the
+% \cs{ifframecite@hang} flag: \texttt{margin} means the label is hung
+% into the margin (hanging label), \texttt{inline} means label and title
+% flow in one line.
+%
+%    \begin{macrocode}
+\newif\ifframecite@hang
+\framecite@hangtrue
+\DeclareOption{label=margin}{\framecite@hangtrue}
+\DeclareOption{label=inline}{\framecite@hangfalse}
+%    \end{macrocode}
+%
+% The rule visibility mode. The chosen mode string is stored verbatim and
+% compared later against the three saved literals with \cs{ifx}.
+%
+%    \begin{macrocode}
+\def\framecite@rulemode{auto}
+\def\framecite@rule@always{always}%
+\def\framecite@rule@auto{auto}%
+\def\framecite@rule@never{never}%
+\DeclareOption{rule=always}{\def\framecite@rulemode{always}}
+\DeclareOption{rule=auto}{\def\framecite@rulemode{auto}}
+\DeclareOption{rule=never}{\def\framecite@rulemode{never}}
+\DeclareOption*{\PackageWarning{framecite}{Unknown option `\CurrentOption'}}
+\ProcessOptions\relax
+%    \end{macrocode}
+
+%
+% \textsf{etoolbox} drives the option handling below (lists, csname
+% tools, patching). beamer must already be the document class: we patch
+% \texttt{\string\endbeamer@frameslide} and hook
+% \texttt{\string\AtBeginEnvironment\{frame\}}.
+%
+%    \begin{macrocode}
+\RequirePackage{etoolbox}
+%    \end{macrocode}
+
+%
+% Guard: the beamer class.
+%
+%    \begin{macrocode}
+\@ifclassloaded{beamer}{}%
+  {\PackageError{framecite}{Load framecite only under the beamer class.}%
+   {Use \string\documentclass{beamer}\space BEFORE framecite.}}
+%    \end{macrocode}
+
+%
+% Guard: \textsf{biblatex} must precede this package, because we wrap
+% its cite commands and call \texttt{\string\DeclareCiteCommand}.
+%
+%    \begin{macrocode}
+\@ifpackageloaded{biblatex}%
+  {}%
+  {\PackageError{framecite}{Load biblatex BEFORE framecite.}%
+   {E.g. \string\usepackage[style=numeric]{biblatex}\space
+    \string\addbibresource{refs.bib}\space\string\usepackage{framecite}}}
+%    \end{macrocode}
+
+%
+%    \begin{macrocode}
+\RequirePackage{xspace}% \xspace
+%    \end{macrocode}
+
+%
+% The heart of the per-frame bookkeeping is a \emph{generation
+% counter}. It bumps at every frame start; the seen flag
+% \cs{framecite@seen@<gen>@<key>} dedups within one frame.
+%
+% \emph{Invariant: all state writes in this package are global}
+% (\texttt{\string\csgdef}, \texttt{\string\xdef},
+% \texttt{\string\g@addto@macro}). beamer typesets a frame once per
+% overlay slide, with the body inside the frame's \texttt{vbox} group:
+% group-local writes die at the end of each pass, so every bookkeeping
+% write must survive the group.
+%
+% \cs{ifframecite@realfootnote} is raised by the \texttt{\string\footnote}
+% wrapper in \texttt{auto} mode and gates the footnote rule. The flush
+% writes \texttt{\string\footnotetext} directly, bypassing that wrapper,
+% so source lines never count as real footnotes.
+%
+%    \begin{macrocode}
+\newif\ifframecite@realfootnote
+\newcommand*{\framecite@framekeys}{}
+\gdef\framecite@framekeys{}
+\gdef\framecite@gen{0}%
+\AtBeginEnvironment{frame}{\gdef\framecite@framekeys{}%
+  \global\framecite@realfootnotefalse
+  \xdef\framecite@gen{\the\numexpr\framecite@gen+1\relax}}%
+%    \end{macrocode}
+
+%
+% Registering is a two-step affair: split a key list, then record each
+% unseen key.
+%
+%    \begin{macrocode}
+\newcommand*{\framecite@addkeys}[1]{\forcsvlist\framecite@addone{#1}}
+%    \end{macrocode}
+%
+% \cs{framecite@framekeys} is a token list of \cs{framecite@emit}\marg{key}
+% calls: a small \emph{program} list. \texttt{\string\g@addto@macro}
+% appends without re-expanding the old list, and the flush later simply
+% executes the whole macro. Deduplication stays in \cs{framecite@addone}.
+%
+%    \begin{macrocode}
+\newcommand*{\framecite@addone}[1]{%
+  \ifcsdef{framecite@seen@\framecite@gen @#1}{}%
+    {\csgdef{framecite@seen@\framecite@gen @#1}{}%
+     \g@addto@macro\framecite@framekeys{\framecite@emit{#1}}}%
+}
+%    \end{macrocode}
+%
+% The pre/post texts. \cs{framecite@addprepost} receives the star flag,
+% the key list, and the two optional texts; each key of the list is
+% processed by \cs{framecite@addonepp}, with the arguments baked in via
+% the partial-application form of \texttt{\string\forcsvlist}.
+%
+% Starred calls store the texts verbatim; missing texts are stored
+% empty. Unstarred calls wrap \emph{pre} as \texttt{<pre>\string\xspace}
+% and \emph{post} as \texttt{\string\xspace<post>}, and touch nothing
+% when the argument is missing. The storage key is generation-stamped,
+% so pre/post state is per frame like the key list. Note that unlike the
+% list, the texts are not deduplicated: the last registration for a key
+% on a frame wins.
+%
+%    \begin{macrocode}
+\NewDocumentCommand{\framecite@addprepost}{m m m m}{\forcsvlist{\framecite@addonepp{#1}{#3}{#4}}{#2}}
+\NewDocumentCommand{\framecite@addonepp}{m m m m}{%
+  \IfBooleanTF{#1}{% star
+    \IfValueTF{#2}{\csgdef{framecite@pre@\framecite@gen @#4}{#2}}{\csgdef{framecite@pre@\framecite@gen @#4}{}}%
+    \IfValueTF{#3}{\csgdef{framecite@post@\framecite@gen @#4}{#3}}{\csgdef{framecite@post@\framecite@gen @#4}{}}%
+  }{% no star
+    \IfValueTF{#2}{\csgdef{framecite@pre@\framecite@gen @#4}{#2\xspace}}{}%
+    \IfValueTF{#3}{\csgdef{framecite@post@\framecite@gen @#4}{\xspace#3}}{}%
+  }%
+}
+%    \end{macrocode}
+
+%
+% Rendering: \cs{framecite@namesprefix} prints the author names (or, if
+% there is no author, the editor names) with a trailing colon and tie;
+% an entry with neither name prints nothing, so the entry falls back to
+% the bare quoted title and no stray colon remains.
+%
+%    \begin{macrocode}
+\newcommand*{\framecite@namesprefix}{%
+  \ifnameundef{author}%
+    {\ifnameundef{editor}{}{\printnames[][1-]{editor}:~}}%
+    {\printnames[][1-]{author}:~}}
+\DeclareCiteCommand{\framecite@cite}
+  {}
+  {\framecite@namesprefix\mkbibquote{\iffieldundef{shorttitle}{\printfield{title}}{\printfield{shorttitle}}}}
+  {}
+  {}
+%    \end{macrocode}
+
+%
+% One entry, two shapes, selected by the placement mode.
+%
+%    \begin{macrocode}
+\newcommand*{\framecite@entrytext}[1]{%
+  \ifframecite@hang
+%    \end{macrocode}
+%
+% In \texttt{margin} mode the pre text (if any), the label, and a small
+% gap are pushed left into the margin with \texttt{\string\llap}. The
+% title stays flush at the left edge like a normal footnote; the total
+% width of the \texttt{\string\llap} box is zero, its content juts
+% leftward into the gutter, and \texttt{\string\enspace} is the gap.
+%
+%    \begin{macrocode}
+    \llap{\csuse{framecite@pre@\framecite@gen @#1}\framecite@orig@cite{#1}\enspace}%
+    \framecite@cite{#1}\csuse{framecite@post@\framecite@gen @#1}%
+  \else
+    \csuse{framecite@pre@\framecite@gen @#1}\framecite@orig@cite{#1}\enspace\framecite@cite{#1}\csuse{framecite@post@\framecite@gen @#1}%
+  \fi
+}
+%    \end{macrocode}
+
+%
+% \DescribeMacro{\fcite}
+% prints the style-correct label in the text and delegates the
+% registration to \cs{fsource}; the star is passed through, so the
+% starred form stores the texts verbatim.
+%
+%    \begin{macrocode}
+\NewDocumentCommand{\fcite}{s o m !o}{%
+  \framecite@orig@cite{#3}%
+  \IfBooleanTF{#1}{\fsource*[#2]{#3}[#4]}{\fsource[#2]{#3}[#4]}%
+}
+%    \end{macrocode}
+
+%
+% \DescribeMacro{\fsource}
+% registers the key and the texts but typesets nothing itself.
+% \texttt{\string\@bsphack}/\texttt{\string\@esphack} swallow the
+% surrounding space, so no spurious white remains wherever it is used.
+%
+%    \begin{macrocode}
+\NewDocumentCommand{\fsource}{s o m !o}{\@bsphack\framecite@addkeys{#3}\framecite@addprepost{#1}{#3}{#2}{#4}\@esphack}
+%    \end{macrocode}
+
+%
+% The flush runs at the end of \texttt{\string\endbeamer@frameslide},
+% that is, after the body but before the footnote output. Real
+% \texttt{\string\footnote}s therefore land above the flushed source
+% lines. (beamer ignores \texttt{\string\AtEndEnvironment} here, hence
+% the patch made below.) In a \texttt{.sty} file \texttt{@} is already a
+% letter, so no \texttt{\string\makeatletter} is needed.
+%
+%    \begin{macrocode}
+\newcommand*{\framecite@flush}{%
+  \ifx\framecite@framekeys\@empty\else
+    \begingroup
+      \renewcommand{\@makefnmark}{}% blank mark: the source line itself carries the cite label
+%    \end{macrocode}
+%
+% The key list is executed directly. \cs{framecite@emit} is bound here,
+% locally, so every stored \cs{framecite@emit}\marg{key} emits one
+% \texttt{\string\footnotetext} with the framecite font and color and a
+% tighter line spread for the tiny source lines.
+%
+%    \begin{macrocode}
+      \def\framecite@emit##1{\footnotetext{\usebeamerfont{framecite}\usebeamercolor[fg]{framecite}%
+          \linespread{0}\selectfont% tighter line spacing for the tiny source lines
+          \raggedright\framecite@entrytext{##1}}}%
+      \framecite@framekeys% executes \framecite@emit{k1}\framecite@emit{k2}\ldots
+    \endgroup
+  \fi
+}
+%    \end{macrocode}
+
+%
+% The interception itself. For each command we save the current meaning
+% under \texttt{\string\framecite@orig@<cmd>} with \texttt{\string\csletcs}
+% (a plain \texttt{\string\let} cannot handle csnames built at runtime),
+% then redefine the public command with an initial \texttt{\string\expandafter}
+% so that \texttt{\string\RenewDocumentCommand} sees the resolved csname.
+% The wrapper spec \texttt{s o o m} parses star and both optional
+% arguments, forwards every combination to the saved original, and
+% registers the keys along the way; starred variants keep their star.
+%
+%    \begin{macrocode}
+\newcommand*{\framecite@patch}[1]{%
+  \@ifundefined{#1}%
+    {\PackageWarning{framecite}{Cannot patch \string#1: not defined.}}%
+    {\csletcs{framecite@orig@#1}{#1}%
+     \expandafter\RenewDocumentCommand\csname #1\endcsname{s o o m}{%
+       \framecite@addkeys{##4}%
+       \IfBooleanTF{##1}%
+         {\IfValueTF{##2}%
+            {\IfValueTF{##3}%
+               {\csname framecite@orig@#1\endcsname*[##2][##3]{##4}}%
+               {\csname framecite@orig@#1\endcsname*[##2]{##4}}}%
+            {\csname framecite@orig@#1\endcsname*{##4}}}%
+         {\IfValueTF{##2}%
+            {\IfValueTF{##3}%
+               {\csname framecite@orig@#1\endcsname[##2][##3]{##4}}%
+               {\csname framecite@orig@#1\endcsname[##2]{##4}}}%
+            {\csname framecite@orig@#1\endcsname{##4}}}}}%
+}
+%    \end{macrocode}
+
+%
+% At \texttt{\string\AtBeginDocument} three things happen.
+%
+% First, the original \texttt{\string\cite} is saved unconditionally:
+% \cs{fcite} prints it, the flush renders the labels with it, and
+% neither may recurse into the wrapped \texttt{\string\cite}. For each
+% wrappable command, \cs{ocite}, \cs{oparencite}, and \cs{otextcite}
+% snapshot the untouched original here, before the patch list runs.
+% This works whether or not \texttt{patchcite} is on. Second, the
+% frame-end hook is
+% installed: one \texttt{\string\patchcmd} call adds the flush after the
+% \cs{par} that closes the body of
+% \texttt{\string\endbeamer@frameslide}.
+%
+%    \begin{macrocode}
+\AtBeginDocument{%
+  \csletcs{framecite@orig@cite}{cite}%
+  \csletcs{ocite}{cite}%
+  \csletcs{oparencite}{parencite}%
+  \csletcs{otextcite}{textcite}%
+  \patchcmd{\endbeamer@frameslide}{\par}{\par\framecite@flush}{}%
+    {\PackageWarning{framecite}{Could not patch \string\endbeamer@frameslide}}%
+%    \end{macrocode}
+%
+% Third, the patch list: only \texttt{\string\cite},
+% \texttt{\string\parencite}, and \texttt{\string\textcite} are
+% wrapped --- the short-form commands that print a citation label. The
+% field extractors \texttt{\string\citeauthor},
+% \texttt{\string\citeyear}, and \texttt{\string\citetitle} print no
+% label, so they leave the source block alone.
+% \texttt{\string\footcite} and \texttt{\string\footcitetext} are out
+% as well: they already place the full citation in the footnote.
+% \cs{fsource} feeds any of these keys manually if ever wanted.
+%
+%    \begin{macrocode}
+  \ifframecite@patchcite
+    \framecite@patch{cite}\framecite@patch{parencite}\framecite@patch{textcite}%
+  \fi
+%    \end{macrocode}
+%
+% The rule modes. beamer draws \texttt{\string\footnoterule} once per
+% frame (in \texttt{\string\beamer@autobreakframebox}) when the footnote
+% insert is non-empty. We keep a copy of the original and redefine the
+% rule per mode: \texttt{never} drops it, \texttt{auto} draws it only
+% when the real-footnote flag is up, \texttt{always} leaves beamer's
+% default intact.
+%
+%    \begin{macrocode}
+  \let\framecite@orig@footnoterule\footnoterule
+  \ifx\framecite@rulemode\framecite@rule@never
+    \renewcommand{\footnoterule}{}%
+  \else\ifx\framecite@rulemode\framecite@rule@auto
+    \renewcommand{\footnoterule}{\ifframecite@realfootnote\framecite@orig@footnoterule\fi}%
+  \else % always: leave beamer's default \footnoterule intact
+  \fi\fi
+%    \end{macrocode}
+%
+% In \texttt{auto} mode we wrap \texttt{\string\footnote} so that real
+% footnotes raise the rule flag. The wrapper parses the optional
+% \texttt{<overlay>} with \texttt{\string\@ifnextchar} and forwards
+% everything to the saved original; calling the saved token avoids
+% recursion. The flag assignment is deliberately global, because
+% \texttt{\string\footnoterule} runs later inside the output routine.
+%
+%    \begin{macrocode}
+  \ifx\framecite@rulemode\framecite@rule@auto
+    \csletcs{framecite@orig@footnote}{footnote}%
+    \def\footnote{\@ifnextchar<\framecite@footnote@ov\framecite@footnote@noov}%
+    \def\framecite@footnote@ov<#1>{\global\framecite@realfootnotetrue\framecite@orig@footnote<#1>}%
+    \def\framecite@footnote@noov{\global\framecite@realfootnotetrue\framecite@orig@footnote}%
+  \fi
+}
+%    \end{macrocode}
+
+%
+% Finally the styling: the beamer element \texttt{framecite} controls
+% font and color of the source lines only, never of real footnotes.
+%
+%    \begin{macrocode}
+\setbeamercolor{framecite}{fg=normal text.fg!70}
+\setbeamerfont{framecite}{size=\tiny}
+
+\endinput
+%</package>
+%    \end{macrocode}
+%
+% \Finale
