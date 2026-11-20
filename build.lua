@@ -11,6 +11,11 @@ installfiles = {"framecite.sty"}
 typesetfiles = {"framecite.dtx"}
 typesetdemofiles = {"framecite_demo.tex"}
 
+-- README ships at the top level of the CTAN upload. The l3build
+-- default textfiles = {"*.md", "*.txt"} misses an extension-less
+-- README and would sweep upload-infos.txt into the zip.
+textfiles = {"README"}
+
 -- The ins writes the generated demo to the unpack directory (build/
 -- unpacked), but l3build collects typesetdemofiles from the main
 -- directory. Copy it into the typesetting sandbox so the demo builds
@@ -34,8 +39,8 @@ excludefiles = {"*~", "build.lua", "config-*.lua",
 
 uploadconfig = {
   pkg       = "framecite",
-  version   = "0.7",
-  author    = "Hirnmoder",
+  version   = "0.8",
+  author    = "Tobias J. Bauer",
   repository = "https://github.com/Hirnmoder/framecite",
   bugtracker = {"https://github.com/Hirnmoder/framecite/issues"},
   license   = "lppl1.3c",
@@ -48,5 +53,5 @@ theme footline, decoupled from \footnote via a blank mark and its own
 beamer font/color element. Collection is automatic from the standard
 cite commands, with optional manual registration (\fcite, \fsource).]],
   ctanPath  = "/macros/latex/contrib/framecite",
-  uploader  = "Hirnmoder",
+  uploader  = "Tobias J. Bauer",
 }

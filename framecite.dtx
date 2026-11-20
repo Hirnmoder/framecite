@@ -2,20 +2,20 @@
 %
 % framecite.dtx --- Per-frame mini references for beamer + biblatex
 %
-% Copyright 2026 Hirnmoder
+% Copyright 2026 Tobias J. Bauer
 %
 % It may be distributed and/or modified under the conditions of the
-% LaTeX Project Public License, either version 1.3 of this license or
+% LaTeX Project Public License, either version 1.3c of this license or
 % (at your option) any later version. The latest version of this
 % license is in
 %
 %     https://www.latex-project.org/lppl.txt
 %
-% and version 1.3 or later is part of all distributions of LaTeX
+% and version 1.3c or later is part of all distributions of LaTeX
 % version 2005/12/01 or later.
 %
 % This work has the LPPL maintenance status "maintained".
-% The Current Maintainer of this work is Hirnmoder.
+% The Current Maintainer of this work is Tobias J. Bauer.
 %
 % This work consists of the files framecite.dtx, framecite.ins,
 % build.lua, and README, and the derived files framecite.sty,
@@ -24,7 +24,7 @@
 % \fi
 %
 %\ProvidesFile{framecite.dtx}
-% [2026/11/19 v0.7 Beamer per-frame mini references]
+% [2026/11/20 v0.8 Beamer per-frame mini references]
 %
 % \iffalse
 %<*driver>
@@ -45,8 +45,8 @@
 % \fi
 %
 % \title{The \textsf{framecite} package}
-% \author{Hirnmoder \\ \texttt{https://github.com/Hirnmoder/framecite}}
-% \date{Version 0.7, released 2026/11/19}
+% \author{Tobias J. Bauer \\ \texttt{https://github.com/Hirnmoder/framecite}}
+% \date{Version 0.8, released 2026/11/20}
 %
 % \maketitle
 %
@@ -167,7 +167,9 @@
 % same arguments as \texttt{\string\cite} --- star, pre-/postnote, key
 % lists --- prints the style label, and never feeds the per-frame
 % source list. Use it where a source line would only repeat what the
-% slide already shows.
+% slide already shows, and in frame titles, section titles, and other
+% headings: beamer expands these late and theme-dependently, so a
+% patched cite there can miss its frame or leak into the next one.
 %
 % \DescribeMacro{\oparencite}
 % \DescribeMacro{\otextcite}
@@ -304,8 +306,8 @@
 
 \title{framecite}
 \subtitle{Per-frame mini references for beamer + biblatex}
-\author{Hirnmoder}
-\date{v0.7 (2026-11-19)}
+\author{Tobias J. Bauer}
+\date{v0.8 (2026-11-20)}
 
 \begin{document}
 
@@ -356,7 +358,9 @@
   The untouched originals are always available as
   \texttt{\string\ocite}, \texttt{\string\oparencite} and
   \texttt{\string\otextcite}:~\ocite{knuth1984} prints the style label
-  and feeds nothing below --- with or without \texttt{patchcite}.
+  and feeds nothing below --- with or without \texttt{patchcite}. Use
+  them in frame titles and section headings, where a patched cite can
+  misfire.
 \end{frame}
 
 \begin{frame}{Manual registration}
@@ -407,10 +411,12 @@
 
 \begin{frame}{Known limitations}
   \begin{itemize}
-    \item Citations inside \texttt{\string\frametitle} or
-      \texttt{\string\framesubtitle} are \emph{not} collected: beamer
-      typesets the title after the source flush. Use
-      \texttt{\string\fsource} in the body instead.
+    \item In \texttt{\string\frametitle}, \texttt{\string\framesubtitle},
+      and section titles, cite with \texttt{\string\ocite}: titles
+      expand late and theme-dependently, so a patched cite there can
+      miss its slide, attach to the next frame, or work in one theme
+      and fail in another. Add \texttt{\string\fsource} in the body
+      if the source should still be listed.
     \item The source order is first appearance, not bibliography order.
     \item The multi-set commands \texttt{\string\cites},
       \texttt{\string\textcites}, \ldots\ and \texttt{\string\nocite} are
@@ -456,10 +462,15 @@
 % \section{Known limitations}
 %
 % \begin{itemize}
-%   \item Citations inside \texttt{\string\frametitle} or
-%     \texttt{\string\framesubtitle} are not collected: beamer typesets
-%     the title after the frame-end source flush has run. Register such
-%     sources with \texttt{\string\fsource} in the frame body instead.
+%   \item In \texttt{\string\frametitle}, \texttt{\string\framesubtitle},
+%     and section titles, cite with the untouched
+%     \texttt{\string\ocite}, \texttt{\string\oparencite}, or
+%     \texttt{\string\otextcite}. Beamer expands such titles late and
+%     theme-dependently, typically after the frame-end source flush:
+%     a patched cite there can miss its own slide, attach to the next
+%     frame, or seem to work until the theme changes. To have the
+%     source listed anyway, register it with \texttt{\string\fsource}
+%     in the frame body.
 %   \item The \emph{order} of the source block is first appearance on the
 %     frame, not bibliography order. A bibliography-ordered block would
 %     need per-frame \texttt{refsection}s; this is out of scope.
@@ -483,8 +494,8 @@
 % \section{License}
 %
 % The files of this work are distributed under the LaTeX Project Public
-% License, version 1.3 or later; see the file header for details. The
-% current maintainer is Hirnmoder.
+% License, version 1.3c or later; see the file header for details. The
+% current maintainer is Tobias J. Bauer.
 %
 % \StopEventually{\PrintIndex}
 %
@@ -501,7 +512,7 @@
 %    \begin{macrocode}
 %<*package>
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{framecite}[2026/11/19 v0.7 Beamer per-frame mini references]
+\ProvidesPackage{framecite}[2026/11/20 v0.8 Beamer per-frame mini references]
 %    \end{macrocode}
 
 %

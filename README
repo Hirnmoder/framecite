@@ -1,6 +1,6 @@
 # framecite — per-frame mini references for beamer + biblatex
 
-Version 0.7, released 2026/11/19.
+Version 0.8, released 2026/11/20.
 
 framecite shows the sources cited on a beamer slide as a small block at
 the bottom of that same slide, so the audience sees where a claim comes
@@ -31,5 +31,5 @@ Alternatively use `l3build`:
 
 License: LaTeX Project Public License, version 1.3c or later.
 
-Maintainer: Hirnmoder (https://github.com/Hirnmoder/framecite)
+Maintainer: Tobias J. Bauer (https://github.com/Hirnmoder/framecite)
 Bug reports: https://github.com/Hirnmoder/framecite/issues
